@@ -66,6 +66,23 @@ public class UriUtils implements IConstants {
         return tokens[len - 1];
     }
 
+    /***
+     * Gets the path from the given Uri,
+     * @param uri The Uri.
+     * @return The path or null if not determined.
+     */
+    public static String getPathFromUri(Uri uri) {
+        if (uri == null) return null;
+        String lastSeg = uri.getLastPathSegment();
+        int index = lastSeg.indexOf(":");
+        int len = lastSeg.length();
+        if (index != -1 && index != len -1) {
+            return lastSeg.substring(index + 1);
+        } else {
+            return lastSeg;
+        }
+    }
+
     /**
      * Gets the display name for a given documentUri.
      *
@@ -198,9 +215,8 @@ public class UriUtils implements IConstants {
         // Add everything in permissionList to sortedList
         List<UriPermission> sortedList = new ArrayList<>(permissionList);
         // Sort with newest first
-        Collections.sort(sortedList,
-                (p1, p2) -> Long.compare(p2.getPersistedTime(),
-                        p1.getPersistedTime()));
+        sortedList.sort((p1, p2) -> Long.compare(p2.getPersistedTime(),
+                p1.getPersistedTime()));
         for (int i = nToKeep; i < nPermissions; i++) {
             UriPermission permission = sortedList.get(i);
             resolver.releasePersistableUriPermission(permission.getUri(),

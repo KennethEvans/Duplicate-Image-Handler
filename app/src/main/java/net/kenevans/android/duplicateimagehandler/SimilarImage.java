@@ -1,30 +1,73 @@
 package net.kenevans.android.duplicateimagehandler;
 
-import android.content.Context;
+import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.widget.ProgressBar;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Class to find similar images. Each image has a fingerprint and a finger.
+ * <br><br>
+ * The fingerprint is is a String derived from a 96 x96 thumbnail of the
+ * image scaled to 8 x 8 then converted to grayscale.
+ * <br><br>
+ * The finger is a 256 character String with values 0 or 1 depending on if
+ * the corresponding pixel in the fingerprint is less than the average pixel
+ * gray value or not.
+ */
 public class SimilarImage implements IConstants {
+    // The condition for a similar image is if the Hamming distance is less
+    // than this value.
+    public static final int SIMILARITY_CONDITION_DEFAULT = 5;
 
-    public static List<Group> find(Context context, List<Image> images) {
-        calculateFingerPrint(context, images);
+    /**
+     * Loops over the given images arranging the similar ones into groups. This
+     * version has no progress bar to update.
+     *
+     * @param activity The Activity calling this method.
+     * @param images   The images.
+     * @return The list of groups.
+     */
+    @SuppressWarnings("unused")
+    public static List<Group> find(Activity activity, List<Image> images) {
+        return find(activity, images, null);
+    }
+
+    /**
+     * Loops over the given images arranging the similar ones into groups. If
+     * the progressBar is not null, it is updated using runOnUiThread.
+     *
+     * @param activity    The Activity calling this method.
+     * @param images      The images.
+     * @param progressBar A progress bar.
+     * @return The list of groups.
+     */
+    public static List<Group> find(Activity activity, List<Image> images,
+                                   ProgressBar progressBar) {
+        // Calculate all the fingerprints
+        calculateFingerPrint(activity, images, progressBar);
+
+        // Find duplicates
         List<Group> groups = new ArrayList<>();
         for (int i = 0; i < images.size(); i++) {
             Image image = images.get(i);
+            if (!image.isValid()) continue;
             List<Image> temp = new ArrayList<>();
             temp.add(image);
             for (int j = i + 1; j < images.size(); j++) {
                 Image image2 = images.get(j);
-                int dist = hamDist(image.getFinger(), image2.getFinger());
-                if (dist < 5) {
+                if (!image.isValid()) continue;
+                if(image.isSimilar()) continue;
+                int dist = hammingDist(image.getFinger(), image2.getFinger());
+                if (dist < SIMILARITY_CONDITION_DEFAULT) {
                     temp.add(image2);
-                    images.remove(image2);
-                    j--;
+//                    images.remove(image2);
+//                    j--;
                 }
             }
             Group group = new Group();
@@ -34,24 +77,60 @@ public class SimilarImage implements IConstants {
         return groups;
     }
 
-    private static void calculateFingerPrint(Context context,
+    /**
+     * Calculates the finger prints for all images. This can take some time.
+     * This version has no progress bar to update.
+     *
+     * @param activity The Activity calling this method.
+     * @param images   The images.
+     */
+    @SuppressWarnings("unused")
+    private static void calculateFingerPrint(Activity activity,
                                              List<Image> images) {
+        calculateFingerPrint(activity, images, null);
+    }
+
+    /**
+     * Calculates the finger prints for all images. This can take some time.
+     * If the progressBar is not null, it is updated using runOnUiThread.
+     *
+     * @param activity    The Activity calling this method.
+     * @param images      The images.
+     * @param progressBar A progress bar.
+     */
+    private static void calculateFingerPrint(Activity activity,
+                                             List<Image> images,
+                                             ProgressBar progressBar) {
+        if (progressBar != null) {
+            progressBar.setIndeterminate(false);
+            progressBar.setMax(images.size());
+            progressBar.setProgress(0);
+        }
         float scale_width, scale_height;
         Log.d(TAG, "calculateFingerPrint: images: " + images.size());
-        Bitmap bitmap = null;
+        Bitmap bitmap;
         int nNull = 0;
         int nProcessed = 0;
         try {
-            for (Image p : images) {
+            for (Image image : images) {
                 nProcessed++;
-                if(nProcessed % 1000 == 0) {
-                    Log.d(TAG, "Processed " + nProcessed);
+                if (progressBar != null && nProcessed % 10 == 0) {
+                    int finalNProcessed = nProcessed;
+                    activity.runOnUiThread(() ->
+                            progressBar.setProgress(finalNProcessed)
+                    );
                 }
-                bitmap = MediaStore.Images.Thumbnails.getThumbnail(context.getContentResolver(), p.getId(), MediaStore.Images.Thumbnails.MICRO_KIND, null);
+                // MICRO_KIND is 96 x 96
+                bitmap =
+                        MediaStore.Images.Thumbnails
+                                .getThumbnail(activity.getContentResolver(),
+                                        image.getId(),
+                                        MediaStore.Images.Thumbnails.MICRO_KIND,
+                                        null);
                 if (bitmap == null) {
                     nNull++;
-                    Log.d(TAG, "Null bitmap for " + p.getPath());
-                    p.setFinger(0);
+                    Log.d(TAG, "Null bitmap for " + image.getPath());
+                    image.setValid(false);
                     continue;
                 }
                 scale_width = 8.0f / bitmap.getWidth();
@@ -61,7 +140,7 @@ public class SimilarImage implements IConstants {
 
                 Bitmap scaledBitmap = Bitmap.createBitmap(bitmap, 0, 0,
                         bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                p.setFinger(getFingerPrint(scaledBitmap));
+                image.setFinger(getFingerPrint(scaledBitmap));
 
                 bitmap.recycle();
                 scaledBitmap.recycle();
@@ -79,6 +158,15 @@ public class SimilarImage implements IConstants {
         return getFingerPrint(grayPixels, grayAvg);
     }
 
+    /**
+     * Calculates the fingerprint by setting characters to 0 or 1 depending
+     * on if the corresponding pixel in the fingerprint is less than the average
+     * pixel gray value or not. Then calculates the finger
+     *
+     * @param pixels The array of pixels in the fingerprint.
+     * @param avg    The average gray value.
+     * @return The finger.
+     */
     private static long getFingerPrint(double[][] pixels, double avg) {
         int width = pixels[0].length;
         int height = pixels.length;
@@ -116,7 +204,7 @@ public class SimilarImage implements IConstants {
                 count += pixels[i][j];
             }
         }
-        return count / (width * height);
+        return (double)count / (double)(width * height);
     }
 
     private static double[][] getGrayPixels(Bitmap bitmap) {
@@ -131,6 +219,13 @@ public class SimilarImage implements IConstants {
         return pixels;
     }
 
+    /**
+     * Computes the gray value of the given RGB pixel using 0.3 red, 0.59 green,
+     * and 0.11 blue.
+     *
+     * @param pixel The RGB pixel.
+     * @return The gray value.
+     */
     private static double computeGrayValue(int pixel) {
         int red = (pixel >> 16) & 0xFF;
         int green = (pixel >> 8) & 0xFF;
@@ -138,7 +233,16 @@ public class SimilarImage implements IConstants {
         return 0.3 * red + 0.59 * green + 0.11 * blue;
     }
 
-    private static int hamDist(long finger1, long finger2) {
+    /**
+     * Calculates the Hamming distance between the two given fingerprints.
+     * The Hamming distance is the number of positions at which the
+     * corresponding symbols are different.
+     *
+     * @param finger1 The first fingerprint.
+     * @param finger2 The second fingerprint.
+     * @return The hamming distance.
+     */
+    private static int hammingDist(long finger1, long finger2) {
         int dist = 0;
         long result = finger1 ^ finger2;
         while (result != 0) {

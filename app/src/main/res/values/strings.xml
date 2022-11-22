@@ -7,6 +7,13 @@
     <string name="change_directory_label">Change Directory</string>
     <string name="directory_label">Directory</string>
     <string name="default_directory_name">No directory specified</string>
+    <string name="choose_data_directory_item">Choose Directory</string>
+    <string name="info_item">Info</string>
+    <string name="problem_images_item">Show Problem Images</string>
+    <string name="remove_checked_item">Remove Checked Images</string>
+    <string name="invalid_images_title">Problem Images (No Thumbnail)</string>
+    <string name="group_title">Group %d</string>
+
 
     <!-- Info/Help -->
     <string name="help_url_not_found">Cannot find Help URL</string>
