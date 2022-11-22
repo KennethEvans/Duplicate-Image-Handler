@@ -9,6 +9,8 @@
     <string name="default_directory_name">No directory specified</string>
     <string name="choose_data_directory_item">Choose Directory</string>
     <string name="info_item">Info</string>
+    <string name="check_box_delete_text">Delete</string>
+    <string name="image_content_desc">Image</string>
     <string name="problem_images_item">Show Problem Images</string>
     <string name="remove_checked_item">Remove Checked Images</string>
     <string name="invalid_images_title">Problem Images (No Thumbnail)</string>

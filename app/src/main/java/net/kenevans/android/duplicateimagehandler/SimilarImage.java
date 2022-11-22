@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.View;
 import android.widget.ProgressBar;
 
 import java.util.ArrayList;
@@ -57,17 +58,17 @@ public class SimilarImage implements IConstants {
         for (int i = 0; i < images.size(); i++) {
             Image image = images.get(i);
             if (!image.isValid()) continue;
+            if (image.isSimilar()) continue;
             List<Image> temp = new ArrayList<>();
             temp.add(image);
             for (int j = i + 1; j < images.size(); j++) {
                 Image image2 = images.get(j);
                 if (!image.isValid()) continue;
-                if(image.isSimilar()) continue;
+                if (image.isSimilar()) continue;
                 int dist = hammingDist(image.getFinger(), image2.getFinger());
                 if (dist < SIMILARITY_CONDITION_DEFAULT) {
                     temp.add(image2);
-//                    images.remove(image2);
-//                    j--;
+                    image2.setSimilar(true);
                 }
             }
             Group group = new Group();
@@ -102,9 +103,12 @@ public class SimilarImage implements IConstants {
                                              List<Image> images,
                                              ProgressBar progressBar) {
         if (progressBar != null) {
-            progressBar.setIndeterminate(false);
-            progressBar.setMax(images.size());
-            progressBar.setProgress(0);
+            activity.runOnUiThread(() -> {
+                progressBar.setIndeterminate(false);
+                progressBar.setMax(images.size());
+                progressBar.setProgress(0);
+                progressBar.setVisibility(View.VISIBLE);
+            });
         }
         float scale_width, scale_height;
         Log.d(TAG, "calculateFingerPrint: images: " + images.size());
@@ -204,7 +208,7 @@ public class SimilarImage implements IConstants {
                 count += pixels[i][j];
             }
         }
-        return (double)count / (double)(width * height);
+        return (double) count / (double) (width * height);
     }
 
     private static double[][] getGrayPixels(Bitmap bitmap) {

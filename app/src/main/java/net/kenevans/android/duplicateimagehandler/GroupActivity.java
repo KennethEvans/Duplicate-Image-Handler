@@ -1,12 +1,9 @@
 package net.kenevans.android.duplicateimagehandler;
 
-import android.content.ContentResolver;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.ParcelFileDescriptor;
 import android.provider.DocumentsContract;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -43,7 +40,7 @@ import androidx.documentfile.provider.DocumentFile;
 public class GroupActivity extends AppCompatActivity implements IConstants {
     private Handler mHandler;
     private ListView mListView;
-    private ProgressBar progressBar;
+    private ProgressBar mProgressBar;
     private List<Image> mImages;
     private List<Image> mInvalidImages;
     private List<Group> mGroups;
@@ -63,13 +60,48 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         }
         mImages = ImageRepository.getImages(this, directory);
 
-        progressBar = findViewById(R.id.progressBar);
+        mProgressBar = findViewById(R.id.progressBar);
         mHandler = new Handler(getMainLooper());
+        startFind();
+    }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_group, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+        if (id == R.id.info) {
+            info();
+            return true;
+        } else if (id == R.id.remove_checked) {
+            removeCheckedImages();
+            return true;
+        } else if (id == R.id.problem_images) {
+            showProblemImages();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void startFind() {
+        Log.d(TAG, this.getClass().getSimpleName() + ".startFind:");
         new Thread(() -> {
             Log.d(TAG, "GroupActivity: run: images=" + mImages.size());
+            mGroups = new ArrayList<>();
+            runOnUiThread(() ->
+                    mListView.setAdapter(new GroupAdapter(GroupActivity.this)
+                    ));
             final List<Group> groups =
-                    SimilarImage.find(GroupActivity.this, mImages, progressBar);
+                    SimilarImage.find(GroupActivity.this, mImages,
+                            mProgressBar);
             int nMultiple = 0;
             List<Group> prunedGroups = new ArrayList<>();
             for (Group group : groups) {
@@ -84,7 +116,7 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
             String msg = "Found " + mImages.size() + " images in "
                     + prunedGroups.size() + " multiple-image groups";
             mHandler.post(() -> {
-                progressBar.setVisibility(View.GONE);
+                mProgressBar.setVisibility(View.GONE);
 //                        Utils.infoMsg(GroupActivity.this, msg);
             });
 
@@ -112,32 +144,6 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
                 mListView.setAdapter(new GroupAdapter(GroupActivity.this));
             });
         }).start();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_group, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.info) {
-            info();
-            return true;
-        } else if (id == R.id.remove_checked) {
-            removeCheckedImages();
-            return true;
-        } else if (id == R.id.problem_images) {
-            showProblemImages();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     /**
@@ -181,17 +187,32 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
                 getContentResolver().getPersistedUriPermissions().get(0).getUri();
         DocumentFile documentFile = DocumentFile.fromTreeUri(this,
                 persistedUri);
+        List<Image> errorImages = new ArrayList<>();
+        boolean res;
         for (Image image : checkedImages) {
             File file = new File(image.getPath());
             DocumentFile nextDocument = documentFile.findFile(file.getName());
             try {
-                DocumentsContract.deleteDocument(getContentResolver(),
+                res = DocumentsContract.deleteDocument(getContentResolver(),
                         nextDocument.getUri());
+                if (!res) {
+                    errorImages.add(image);
+                } else {
+                    mImages.remove(image);
+                }
             } catch (Exception ex) {
                 Utils.excMsg(this, "Error deleting " + file, ex);
             }
         }
-        mListView.setAdapter(new GroupAdapter(GroupActivity.this));
+        if (errorImages.size() > 0) {
+            StringBuilder msg = new StringBuilder();
+            msg.append("Errors deleting:").append("\n");
+            for (Image image2 : errorImages) {
+                msg.append(image2.getPath()).append("\n");
+            }
+            Utils.errMsg(this, msg.toString());
+        }
+        startFind();
     }
 
     /**
