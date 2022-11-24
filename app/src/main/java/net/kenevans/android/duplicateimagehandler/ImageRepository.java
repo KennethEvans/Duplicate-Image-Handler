@@ -10,10 +10,6 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by gavin on 2017/3/27.
- */
-
 public class ImageRepository implements IConstants {
 
     private static final String[] STORE_IMAGES = {

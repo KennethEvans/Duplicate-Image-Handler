@@ -1,10 +1,14 @@
 package net.kenevans.android.duplicateimagehandler;
 
 import android.app.Activity;
+import android.content.ContentUris;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
+import android.net.Uri;
+import android.os.CancellationSignal;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.util.Size;
 import android.view.View;
 import android.widget.ProgressBar;
 
@@ -124,13 +128,30 @@ public class SimilarImage implements IConstants {
                             progressBar.setProgress(finalNProcessed)
                     );
                 }
-                // MICRO_KIND is 96 x 96
-                bitmap =
-                        MediaStore.Images.Thumbnails
-                                .getThumbnail(activity.getContentResolver(),
-                                        image.getId(),
-                                        MediaStore.Images.Thumbnails.MICRO_KIND,
-                                        null);
+//                if (Build.VERSION.SDK_INT >= 29) {
+                try {
+                    Uri imageUri =
+                            ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                    image.getId());
+                    CancellationSignal ca = new CancellationSignal();
+                    bitmap =
+                            activity.getContentResolver().loadThumbnail(imageUri,
+                                    new Size(96, 96), ca);
+                } catch (Exception ex) {
+                    // Happens if there is not a thumbnail
+                    bitmap = null;
+                }
+//                } else {
+//                    // MICRO_KIND is 96 x 96
+//                    bitmap =
+//                            MediaStore.Images.Thumbnails
+//                                    .getThumbnail(activity
+//                                    .getContentResolver(),
+//                                            image.getId(),
+//                                            MediaStore.Images.Thumbnails
+//                                            .MICRO_KIND,
+//                                            null);
+//                }
                 if (bitmap == null) {
                     nNull++;
                     Log.d(TAG, "Null bitmap for " + image.getPath());

@@ -33,9 +33,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.documentfile.provider.DocumentFile;
 
-/**
- * Created by gavin on 2017/3/27.
- */
 
 public class GroupActivity extends AppCompatActivity implements IConstants {
     private Handler mHandler;
@@ -50,7 +47,6 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         Log.d(TAG, this.getClass().getSimpleName() + ".onCreate:");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_group);
-        PermissionsUtils.getPermissions(this);
 
         mListView = findViewById(R.id.list);
         String directory = null;
@@ -171,6 +167,11 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         }
     }
 
+    /**
+     * Removes the checked images. Runs in a thread as it can take some time.
+     * Calls startFind when done, which also runs in a thread. Each of these
+     * threads will have a new progress bar.
+     */
     private void removeCheckedImages() {
         Log.d(TAG, this.getClass().getSimpleName() + ".removeCheckedImages:");
         List<Image> checkedImages = new ArrayList<>();
@@ -183,36 +184,56 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
             Utils.warnMsg(this, "There are no checked images to remove");
             return;
         }
-        Uri persistedUri =
-                getContentResolver().getPersistedUriPermissions().get(0).getUri();
-        DocumentFile documentFile = DocumentFile.fromTreeUri(this,
-                persistedUri);
-        List<Image> errorImages = new ArrayList<>();
-        boolean res;
-        for (Image image : checkedImages) {
-            File file = new File(image.getPath());
-            DocumentFile nextDocument = documentFile.findFile(file.getName());
-            try {
-                res = DocumentsContract.deleteDocument(getContentResolver(),
-                        nextDocument.getUri());
-                if (!res) {
-                    errorImages.add(image);
-                } else {
-                    mImages.remove(image);
+        mListView.setAdapter(new GroupAdapter(GroupActivity.this));
+        if (mProgressBar != null) {
+            mProgressBar.setIndeterminate(false);
+            mProgressBar.setMax(checkedImages.size());
+            mProgressBar.setProgress(0);
+            mProgressBar.setVisibility(View.VISIBLE);
+        }
+        new Thread(() -> {
+            mGroups = new ArrayList<>();
+            runOnUiThread(() ->
+                    mListView.setAdapter(new GroupAdapter(GroupActivity.this)
+                    ));
+            Uri persistedUri =
+                    getContentResolver().getPersistedUriPermissions().get(0).getUri();
+            DocumentFile documentFile = DocumentFile.fromTreeUri(this,
+                    persistedUri);
+            List<Image> errorImages = new ArrayList<>();
+            boolean res;
+            int nImages = 0;
+            for (Image image : checkedImages) {
+                nImages++;
+                File file = new File(image.getPath());
+                DocumentFile nextDocument =
+                        documentFile.findFile(file.getName());
+                try {
+                    res = DocumentsContract.deleteDocument(getContentResolver(),
+                            nextDocument.getUri());
+                    if (!res) {
+                        errorImages.add(image);
+                    } else {
+                        mImages.remove(image);
+                    }
+                } catch (Exception ex) {
+                    Utils.excMsg(this, "Error deleting " + file, ex);
                 }
-            } catch (Exception ex) {
-                Utils.excMsg(this, "Error deleting " + file, ex);
+                int finalNImages = nImages;
+                GroupActivity.this.runOnUiThread(() ->
+                        mProgressBar.setProgress(finalNImages)
+                );
             }
-        }
-        if (errorImages.size() > 0) {
-            StringBuilder msg = new StringBuilder();
-            msg.append("Errors deleting:").append("\n");
-            for (Image image2 : errorImages) {
-                msg.append(image2.getPath()).append("\n");
+            if (errorImages.size() > 0) {
+                StringBuilder msg = new StringBuilder();
+                msg.append("Errors deleting:").append("\n");
+                for (Image image2 : errorImages) {
+                    msg.append(image2.getPath()).append("\n");
+                }
+                Utils.errMsg(this, msg.toString());
             }
-            Utils.errMsg(this, msg.toString());
-        }
-        startFind();
+            startFind();
+        }).start();
     }
 
     /**
