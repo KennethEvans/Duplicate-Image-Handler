@@ -74,6 +74,15 @@
             android:layout_height="wrap_content"
             android:text="@string/change_directory_label"
             />
+        <CheckBox
+            android:id="@+id/subdirectories_check_box"
+            android:layout_marginTop = "5dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/check_box_subdirectories"
+            android:textSize="18sp"
+            android:minHeight="0dp"
+            />
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

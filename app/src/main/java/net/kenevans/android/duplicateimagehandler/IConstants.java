@@ -17,10 +17,16 @@ public interface IConstants {
     String MAIN_ACTIVITY = "MainActivity";
 
     /**
-     * Intent code for plotting a session of current.
+     * Intent code for the directory.
      */
     String DIRECTORY_CODE = PACKAGE_NAME
             + ".directory";
+
+    /**
+     * Intent code for using subdirectories.
+     */
+    String USE_SUBDIRECTORIES_CODE = PACKAGE_NAME
+            + ".useSubdirectories";
 
     // Preferences
     String PREF_TREE_URI = "tree_uri";}

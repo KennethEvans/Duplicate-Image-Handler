@@ -50,11 +50,14 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
 
         mListView = findViewById(R.id.list);
         String directory = null;
+        boolean useSubdirectories = true;
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
             directory = extras.getString(DIRECTORY_CODE, null);
+            useSubdirectories = extras.getBoolean(USE_SUBDIRECTORIES_CODE,
+                    true);
         }
-        mImages = ImageRepository.getImages(this, directory);
+        mImages = ImageRepository.getImages(this, directory, useSubdirectories);
 
         mProgressBar = findViewById(R.id.progressBar);
         mHandler = new Handler(getMainLooper());

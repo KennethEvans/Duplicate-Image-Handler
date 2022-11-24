@@ -5,12 +5,11 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
+import android.widget.CheckBox;
 
 import net.kenevans.android.duplicateimagehandler.databinding.ActivityMainBinding;
 
@@ -21,7 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 public class MainActivity extends AppCompatActivity implements IConstants {
     private String mDirectory;
     private ActivityMainBinding mBinding;
-    private Button mButtonGetDirectory;
+    private boolean mUseSubdirectories;
 
     // Launcher for PREF_TREE_URI
     private final ActivityResultLauncher<Intent> openDocumentTreeLauncher =
@@ -84,12 +83,26 @@ public class MainActivity extends AppCompatActivity implements IConstants {
         mBinding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(mBinding.getRoot());
         setSupportActionBar(mBinding.toolbar);
-        mButtonGetDirectory = findViewById(R.id.change_directory_button);
-        mButtonGetDirectory.setOnClickListener(v -> chooseDataDirectory());
+        Button buttonGetDirectory = findViewById(R.id.change_directory_button);
+        buttonGetDirectory.setOnClickListener(v -> chooseDataDirectory());
+        CheckBox subdirectoriesCheckBox =
+                findViewById(R.id.subdirectories_check_box);
 
         Log.d(TAG, "mDirectory=" + mDirectory);
         mDirectory = getDirectoryFromTreeUri();
+        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
+                MODE_PRIVATE);
+        mUseSubdirectories = prefs.getBoolean(USE_SUBDIRECTORIES_CODE, true);
         updateDirectory();
+        subdirectoriesCheckBox.setOnCheckedChangeListener((buttonView,
+                                                           isChecked) -> {
+            mUseSubdirectories = isChecked;
+            SharedPreferences.Editor editor =
+                    getSharedPreferences(MAIN_ACTIVITY,
+                            MODE_PRIVATE).edit();
+            editor.putBoolean(USE_SUBDIRECTORIES_CODE, mUseSubdirectories);
+            editor.apply();
+        });
 
         if (mDirectory == null) {
             mBinding.directoryName.setText(R.string.default_directory_name);
@@ -104,6 +117,7 @@ public class MainActivity extends AppCompatActivity implements IConstants {
                 Intent intent = new Intent(MainActivity.this,
                         GroupActivity.class);
                 intent.putExtra(DIRECTORY_CODE, mDirectory);
+                intent.putExtra(USE_SUBDIRECTORIES_CODE, mUseSubdirectories);
                 startActivity(intent);
             }
         });

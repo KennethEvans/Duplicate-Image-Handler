@@ -23,10 +23,11 @@ public class ImageRepository implements IConstants {
     };
 
     public static List<Image> getImages(Context context) {
-        return getImages(context, null);
+        return getImages(context, null, false);
     }
 
-    public static List<Image> getImages(Context context, String directory) {
+    public static List<Image> getImages(Context context, String directory,
+                                        boolean useSubdirectories) {
         String selection;
         String[] selectionArgs;
         if (directory == null) {
@@ -35,7 +36,8 @@ public class ImageRepository implements IConstants {
         } else {
             selection = MediaStore.Images.ImageColumns.RELATIVE_PATH
                     + " LIKE?";
-            selectionArgs = new String[]{directory + "%"};
+            String subDirectoriesMarker = useSubdirectories ? "%" : "";
+            selectionArgs = new String[]{directory + subDirectoriesMarker};
         }
         if (selection == null) {
             Log.d(TAG, "getImages: selection=selection"
@@ -58,7 +60,7 @@ public class ImageRepository implements IConstants {
                 image.setName(cursor.getString(2));
                 image.setMimetype(cursor.getString(3));
                 image.setSize(cursor.getLong(4));
-                image.setDateModified(1000* cursor.getLong(5));
+                image.setDateModified(1000 * cursor.getLong(5));
                 image.setDateTaken(cursor.getLong(6));
 
                 images.add(image);
