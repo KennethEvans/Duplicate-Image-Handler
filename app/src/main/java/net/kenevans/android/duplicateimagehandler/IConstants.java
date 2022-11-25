@@ -23,6 +23,11 @@ public interface IConstants {
             + ".directory";
 
     /**
+     * Key for information URL sent to InfoActivity.
+     */
+    String INFO_URL = "InformationURL";
+
+    /**
      * Intent code for using subdirectories.
      */
     String USE_SUBDIRECTORIES_CODE = PACKAGE_NAME

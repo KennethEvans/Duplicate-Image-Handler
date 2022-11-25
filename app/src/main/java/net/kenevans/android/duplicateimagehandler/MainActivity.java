@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 
@@ -27,13 +26,14 @@ public class MainActivity extends AppCompatActivity implements IConstants {
             registerForActivityResult(
                     new ActivityResultContracts.StartActivityForResult(),
                     result -> {
-                        Log.d(TAG, "openDocumentTreeLauncher: result" +
-                                ".getResultCode()=" + result.getResultCode());
+//                        Log.d(TAG, "openDocumentTreeLauncher: result" +
+//                                ".getResultCode()=" + result.getResultCode());
                         // Find the UID for this application
-                        Log.d(TAG, "URI=" + UriUtils.getApplicationUid(this));
-                        Log.d(TAG,
-                                "Current permissions (initial): "
-                                        + UriUtils.getNPersistedPermissions(this));
+//                        Log.d(TAG, "UID=" + UriUtils.getApplicationUid(this));
+//                        Log.d(TAG,
+//                                "Current permissions (initial): "
+//                                        + UriUtils.getNPersistedPermissions
+//                                        (this));
                         try {
                             if (result.getResultCode() == RESULT_OK &&
                                     result.getData() != null) {
@@ -60,15 +60,18 @@ public class MainActivity extends AppCompatActivity implements IConstants {
                                     editor.apply();
                                     // Trim the persisted permissions
                                     UriUtils.trimPermissions(this, 1);
+                                    mDirectory = getDirectoryFromTreeUri();
                                 } catch (Exception ex) {
                                     String msg = "Failed to " +
                                             "takePersistableUriPermission for "
                                             + treeUri.getPath();
                                     Utils.excMsg(this, msg, ex);
                                 }
-                                Log.d(TAG,
-                                        "Current permissions (final): "
-                                                + UriUtils.getNPersistedPermissions(this));
+//                                Log.d(TAG,
+//                                        "Current permissions (final): "
+//                                                + UriUtils
+//                                                .getNPersistedPermissions
+//                                                (this));
                             }
                         } catch (Exception ex) {
                             Log.e(TAG, "Error in openDocumentTreeLauncher: " +
@@ -83,17 +86,24 @@ public class MainActivity extends AppCompatActivity implements IConstants {
         mBinding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(mBinding.getRoot());
         setSupportActionBar(mBinding.toolbar);
+        Button buttonAllMedia = findViewById(R.id.all_media_button);
+        buttonAllMedia.setOnClickListener(v ->
+        {
+            Log.d(TAG, "buttonAllMedia.setOnClickListener");
+            mDirectory = null;
+            SharedPreferences.Editor editor =
+                    getSharedPreferences(MAIN_ACTIVITY,
+                            MODE_PRIVATE).edit();
+            editor.putString(DIRECTORY_CODE, mDirectory);
+            editor.apply();
+            updateDirectory();
+        });
+
         Button buttonGetDirectory = findViewById(R.id.change_directory_button);
         buttonGetDirectory.setOnClickListener(v -> chooseDataDirectory());
+
         CheckBox subdirectoriesCheckBox =
                 findViewById(R.id.subdirectories_check_box);
-
-        Log.d(TAG, "mDirectory=" + mDirectory);
-        mDirectory = getDirectoryFromTreeUri();
-        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
-                MODE_PRIVATE);
-        mUseSubdirectories = prefs.getBoolean(USE_SUBDIRECTORIES_CODE, true);
-        updateDirectory();
         subdirectoriesCheckBox.setOnCheckedChangeListener((buttonView,
                                                            isChecked) -> {
             mUseSubdirectories = isChecked;
@@ -104,23 +114,13 @@ public class MainActivity extends AppCompatActivity implements IConstants {
             editor.apply();
         });
 
-        if (mDirectory == null) {
-            mBinding.directoryName.setText(R.string.default_directory_name);
-        } else {
-            mBinding.directoryName.setText(mDirectory);
-        }
+        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
+                MODE_PRIVATE);
+        mUseSubdirectories = prefs.getBoolean(USE_SUBDIRECTORIES_CODE, true);
+        mDirectory = prefs.getString(DIRECTORY_CODE, null);
+        updateDirectory();
 
-        mBinding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.d(TAG, this.getClass().getSimpleName() + ".find:");
-                Intent intent = new Intent(MainActivity.this,
-                        GroupActivity.class);
-                intent.putExtra(DIRECTORY_CODE, mDirectory);
-                intent.putExtra(USE_SUBDIRECTORIES_CODE, mUseSubdirectories);
-                startActivity(intent);
-            }
-        });
+        mBinding.fab.setOnClickListener(view -> find());
     }
 
     @Override
@@ -157,6 +157,15 @@ public class MainActivity extends AppCompatActivity implements IConstants {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void find() {
+//        Log.d(TAG, this.getClass().getSimpleName() + " find:");
+        Intent intent = new Intent(MainActivity.this,
+                GroupActivity.class);
+        intent.putExtra(DIRECTORY_CODE, mDirectory);
+        intent.putExtra(USE_SUBDIRECTORIES_CODE, mUseSubdirectories);
+        startActivity(intent);
     }
 
     /**
@@ -224,8 +233,8 @@ public class MainActivity extends AppCompatActivity implements IConstants {
     }
 
     private void updateDirectory() {
-        Log.d(TAG, this.getClass().getSimpleName() + ".updateDirectory:");
-        mDirectory = getDirectoryFromTreeUri();
+//        Log.d(TAG, this.getClass().getSimpleName() + ".updateDirectory:"
+//                + " mDirectory=" + mDirectory);
         if (mBinding == null) {
             Log.d(TAG, "mBinding=null");
             return;

@@ -39,13 +39,12 @@ public class ImageRepository implements IConstants {
             String subDirectoriesMarker = useSubdirectories ? "%" : "";
             selectionArgs = new String[]{directory + subDirectoriesMarker};
         }
-        if (selection == null) {
-            Log.d(TAG, "getImages: selection=selection"
-                    + " selectionArgs=" + selectionArgs[0]);
-        } else {
-            Log.d(TAG, "getImages: selection=\"" + selection + "\""
-                    + " selectionArgs[0]=\"" + selectionArgs[0] + "\"");
-        }
+//        if (selection == null) {
+//            Log.d(TAG, "getImages: selection=null");
+//        } else {
+//            Log.d(TAG, "getImages: selection=\"" + selection + "\""
+//                    + " selectionArgs[0]=\"" + selectionArgs[0] + "\"");
+//        }
         Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         ContentResolver contentResolver = context.getContentResolver();
         String sortOrder = MediaStore.Images.Media.DATE_TAKEN + " desc";

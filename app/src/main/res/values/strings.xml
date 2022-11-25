@@ -4,9 +4,10 @@
     <string name="action_settings">Settings</string>
     <string name="fab_label">Find</string>
     <string name="fab_content_description">Floating Action Bar</string>
-    <string name="change_directory_label">Change Directory</string>
+    <string name="all_media_label">All Media</string>
+    <string name="change_directory_label">Select Directory</string>
     <string name="directory_label">Directory</string>
-    <string name="default_directory_name">No directory specified</string>
+    <string name="default_directory_name">All Media</string>
     <string name="choose_data_directory_item">Choose Directory</string>
     <string name="info_item">Info</string>
     <string name="check_box_delete_text">Delete</string>

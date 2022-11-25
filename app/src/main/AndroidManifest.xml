@@ -24,11 +24,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".GroupActivity"
             android:label="@string/group_activity_name"
             />
+        <activity
+            android:name=".InfoActivity"
+            android:label="@string/help_title">
+        </activity>
     </application>
 
 </manifest>

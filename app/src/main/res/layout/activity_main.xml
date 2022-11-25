@@ -69,6 +69,12 @@
             android:textStyle="bold"
             />
         <Button
+            android:id="@+id/all_media_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/all_media_label"
+            />
+        <Button
             android:id="@+id/change_directory_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
