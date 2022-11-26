@@ -41,5 +41,6 @@ public interface IConstants {
 
     // Requests
     int REQ_READ_MEDIA_PERMISSION = 1;
+    int REQ_DELETE_IMAGES = 2;
 }
 

@@ -83,8 +83,7 @@ public class MainActivity extends AppCompatActivity implements IConstants {
 //                                                (this));
                             }
                         } catch (Exception ex) {
-                            Log.e(TAG, "Error in openDocumentTreeLauncher: " +
-                                    "startActivityForResult", ex);
+                            Log.e(TAG, "Error in openDocumentTreeLauncher", ex);
                         }
                     });
 
