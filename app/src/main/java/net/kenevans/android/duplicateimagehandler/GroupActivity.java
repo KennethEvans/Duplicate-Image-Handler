@@ -1,6 +1,8 @@
 package net.kenevans.android.duplicateimagehandler;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -31,6 +33,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 import androidx.documentfile.provider.DocumentFile;
 
 
@@ -62,6 +65,12 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         mProgressBar = findViewById(R.id.progressBar);
         mHandler = new Handler(getMainLooper());
         startFind();
+    }
+
+    @Override
+    public void onResume() {
+        Log.d(TAG, this.getClass().getSimpleName() + " onResume:");
+        super.onResume();
     }
 
     @Override

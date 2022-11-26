@@ -34,4 +34,12 @@ public interface IConstants {
             + ".useSubdirectories";
 
     // Preferences
-    String PREF_TREE_URI = "tree_uri";}
+    String PREF_TREE_URI = "tree_uri";
+
+    // Preferences
+    String PREF_DIRECTORY= "directory";
+
+    // Requests
+    int REQ_READ_MEDIA_PERMISSION = 1;
+}
+

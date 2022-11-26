@@ -1,8 +1,11 @@
 package net.kenevans.android.duplicateimagehandler;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -14,12 +17,18 @@ import net.kenevans.android.duplicateimagehandler.databinding.ActivityMainBindin
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity implements IConstants {
     private String mDirectory;
     private ActivityMainBinding mBinding;
     private boolean mUseSubdirectories;
+    private boolean mReadMediaImagesAsked;
+    private final String mReadImagePermission = (Build.VERSION.SDK_INT >= 33) ?
+            Manifest.permission.READ_MEDIA_IMAGES :
+            Manifest.permission.READ_EXTERNAL_STORAGE;
 
     // Launcher for PREF_TREE_URI
     private final ActivityResultLauncher<Intent> openDocumentTreeLauncher =
@@ -91,11 +100,6 @@ public class MainActivity extends AppCompatActivity implements IConstants {
         {
             Log.d(TAG, "buttonAllMedia.setOnClickListener");
             mDirectory = null;
-            SharedPreferences.Editor editor =
-                    getSharedPreferences(MAIN_ACTIVITY,
-                            MODE_PRIVATE).edit();
-            editor.putString(DIRECTORY_CODE, mDirectory);
-            editor.apply();
             updateDirectory();
         });
 
@@ -117,8 +121,7 @@ public class MainActivity extends AppCompatActivity implements IConstants {
         SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
                 MODE_PRIVATE);
         mUseSubdirectories = prefs.getBoolean(USE_SUBDIRECTORIES_CODE, true);
-        mDirectory = prefs.getString(DIRECTORY_CODE, null);
-        updateDirectory();
+        mDirectory = prefs.getString(PREF_DIRECTORY, null);
 
         mBinding.fab.setOnClickListener(view -> find());
     }
@@ -132,8 +135,24 @@ public class MainActivity extends AppCompatActivity implements IConstants {
     @Override
     public void onResume() {
         Log.d(TAG, this.getClass().getSimpleName() + " onResume:");
-        updateDirectory();
         super.onResume();
+        updateDirectory();
+        // Check permissions (Will prompt user if either not granted)
+        if (!isReadMediaImagesGranted()) {
+            Log.d(TAG, "onResume: isReadMediaImagesGranted()=false");
+            if (!mReadMediaImagesAsked) {
+                requestLocationPermission();
+                mReadMediaImagesAsked = true;
+            } else {
+                Utils.warnMsg(this,
+                        "The necessary permission is not granted. "
+                                + "No images will be found. You can fix this"
+                                + " in Settings|Apps for Duplicate Image " +
+                                "Handler.");
+            }
+        } else {
+            Log.d(TAG, "onResume: isReadMediaImagesGranted()=true");
+        }
     }
 
     @Override
@@ -151,6 +170,9 @@ public class MainActivity extends AppCompatActivity implements IConstants {
         int id = item.getItemId();
         if (id == R.id.info) {
             info();
+            return true;
+        } else if (item.getItemId() == R.id.help) {
+            showHelp();
             return true;
         } else if (id == R.id.choose_data_directory) {
             chooseDataDirectory();
@@ -203,6 +225,25 @@ public class MainActivity extends AppCompatActivity implements IConstants {
     }
 
     /**
+     * Show the help.
+     */
+    private void showHelp() {
+        Log.v(TAG, this.getClass().getSimpleName() + " showHelp");
+        try {
+            // Start the InfoActivity
+            Intent intent = new Intent();
+            intent.setClass(this, InfoActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.putExtra(INFO_URL, "file:///android_asset" +
+                    "/DuplicateImageHandler.html");
+            startActivity(intent);
+        } catch (Exception ex) {
+            Utils.excMsg(this, getString(R.string.help_show_error), ex);
+        }
+    }
+
+    /**
      * Sets the current data directory
      */
     private void chooseDataDirectory() {
@@ -239,13 +280,65 @@ public class MainActivity extends AppCompatActivity implements IConstants {
             Log.d(TAG, "mBinding=null");
             return;
         }
+        SharedPreferences.Editor editor =
+                getSharedPreferences(MAIN_ACTIVITY,
+                        MODE_PRIVATE).edit();
+        editor.putString(PREF_DIRECTORY, mDirectory);
+        editor.apply();
         if (mDirectory == null) {
             mBinding.directoryName.setText(R.string.default_directory_name);
         } else {
             mBinding.directoryName.setText(mDirectory);
         }
-
-
     }
 
+    /**
+     * Determines if the needed permission is granted.
+     *
+     * @return If granted.
+     */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    protected boolean isReadMediaImagesGranted() {
+        return ContextCompat.checkSelfPermission(this, mReadImagePermission) ==
+                PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Determines if the needed permission is granted and calls
+     * requestPermissions if it has not been previously denied.
+     */
+    protected void requestLocationPermission() {
+        Log.d(TAG, this.getClass().getSimpleName()
+                + " mReadMediaImagesAsked=" + mReadMediaImagesAsked);
+        // Check location
+        if (!isReadMediaImagesGranted() && !mReadMediaImagesAsked) {
+            // One or both location permissions are not granted
+            Log.d(TAG, "    Calling requestPermissions");
+            requestPermissions(new String[]{
+                            mReadImagePermission},
+                    REQ_READ_MEDIA_PERMISSION);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[]
+                                                   permissions,
+                                           @NonNull int[] grantResults) {
+        Log.d(TAG, "onRequestPermissionsResult: mReadMediaImagesAsked="
+                + mReadMediaImagesAsked);
+        super.onRequestPermissionsResult(requestCode, permissions,
+                grantResults);
+        if (requestCode == REQ_READ_MEDIA_PERMISSION) {
+            for (int i = 0; i < permissions.length; i++) {
+                if (permissions[i].equals(mReadImagePermission)) {
+                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                        Log.d(TAG, "mReadImagePermission granted");
+                    } else if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                        Log.d(TAG, "mReadImagePermission denied");
+                    }
+                }
+            }
+        }
+    }
 }

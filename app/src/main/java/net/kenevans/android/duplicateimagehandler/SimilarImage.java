@@ -21,7 +21,7 @@ import java.util.List;
  * The fingerprint is is a String derived from a 96 x96 thumbnail of the
  * image scaled to 8 x 8 then converted to grayscale.
  * <br><br>
- * The finger is a 256 character String with values 0 or 1 depending on if
+ * The finger is a 64 character String with values 0 or 1 depending on if
  * the corresponding pixel in the fingerprint is less than the average pixel
  * gray value or not.
  */
