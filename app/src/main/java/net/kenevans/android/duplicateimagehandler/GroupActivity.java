@@ -86,12 +86,10 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
             mUseSubdirectories = extras.getBoolean(USE_SUBDIRECTORIES_CODE,
                     true);
         }
-        mImages = ImageRepository.getImages(this, mDirectory,
-                mUseSubdirectories);
 
         mProgressBar = findViewById(R.id.progressBar);
         mHandler = new Handler(getMainLooper());
-        startFind();
+        refresh();
     }
 
     @Override
@@ -101,9 +99,7 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         super.onResume();
         if (mHandleDelete) {
             mHandleDelete = false;
-            mImages = ImageRepository.getImages(this, mDirectory,
-                    mUseSubdirectories);
-            startFind();
+            refresh();
         }
     }
 
@@ -131,6 +127,9 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
             return true;
         } else if (id == R.id.remove_checked) {
             removeCheckedImages();
+            return true;
+        } else if (id == R.id.refresh) {
+            refresh();
             return true;
         } else if (id == R.id.problem_images) {
             showProblemImages();
@@ -195,6 +194,12 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         }).start();
     }
 
+    private void refresh() {
+        mImages = ImageRepository.getImages(this, mDirectory,
+                mUseSubdirectories);
+        startFind();
+    }
+
     /**
      * Displays info about the current configuration
      */
@@ -221,27 +226,44 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
     }
 
     /**
+     * Brings up a viewer, e.g. the Gallery app, to view the image. Will
+     * typically give the user a choice of apps that can handle the image.
+     *
+     * @param image The image.
+     */
+    private void showViewerForImage(Image image) {
+        Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        Uri imageUri = ContentUris.withAppendedId(uri, image.getId());
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(imageUri);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(intent);
+        } catch (Exception ex) {
+            Utils.errMsg(this,
+                    "There is no activity available to view this image");
+        }
+    }
+
+    /**
      * Removes the checked images. Uses MediaStore.createDeleteRequest
      * available in API 30. Works for All Media.
      */
     private void removeCheckedImages() {
         Log.d(TAG, this.getClass().getSimpleName() +
                 ".removeCheckedImages:");
-        List<Image> checkedImages = new ArrayList<>();
+        List<Uri> uriList = new ArrayList<>();
+        Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         for (Image image : mImages) {
             if (image.isChecked()) {
-                checkedImages.add(image);
+                uriList.add(ContentUris.withAppendedId(uri, image.getId()));
             }
         }
-        if (checkedImages.size() == 0) {
+        if (uriList.size() == 0) {
             Utils.warnMsg(this, "There are no checked images to remove");
             return;
         }
-        List<Uri> uriList = new ArrayList<>();
-        Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        for (Image image : checkedImages) {
-            uriList.add(ContentUris.withAppendedId(uri, image.getId()));
-        }
+
         Log.d(TAG, "removeCheckedImages: Launching PendingIntent"
                 + " nImages=" + uriList.size());
         PendingIntent pi =
@@ -340,25 +362,36 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
                         .transition(DrawableTransitionOptions.withCrossFade())
                         .into(imageView);
                 imageView.setOnClickListener(v ->
-                        Utils.infoMsg(GroupActivity.this,
-                                image.toString()));
+//                        Utils.infoMsg(GroupActivity.this,
+//                                image.toString()));
+                        showViewerForImage(image));
 
                 TextView imageName =
                         (TextView) constraintLayout.getViewById(R.id.image_name);
                 imageName.setText(image.getName());
+                imageName.setOnClickListener(v ->
+                        Utils.infoMsg(GroupActivity.this,
+                                image.toString()));
 
                 TextView imageSize =
                         (TextView) constraintLayout.getViewById(R.id.image_size);
                 String readableSize =
                         Utils.humanReadableByteCountBin(image.getSize());
                 imageSize.setText(readableSize);
+                imageSize.setOnClickListener(v ->
+                        Utils.infoMsg(GroupActivity.this,
+                                image.toString()));
 
                 TextView imagePath =
                         (TextView) constraintLayout.getViewById(R.id.image_path);
                 imagePath.setText(image.getPath());
+                imagePath.setOnClickListener(v ->
+                        Utils.infoMsg(GroupActivity.this,
+                                image.toString()));
 
                 CheckBox checkBox =
                         (CheckBox) constraintLayout.getViewById(R.id.checkBox);
+                checkBox.setChecked(image.isChecked());
                 checkBox.setOnCheckedChangeListener((buttonView,
                                                      isChecked) ->
                         image.setChecked(isChecked));

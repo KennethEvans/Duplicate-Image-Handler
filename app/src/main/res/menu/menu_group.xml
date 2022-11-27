@@ -15,8 +15,14 @@
         app:showAsAction="never"
         />
     <item
-        android:id="@+id/problem_images"
+        android:id="@+id/refresh"
         android:orderInCategory="3"
+        android:title="@string/refresh_item"
+        app:showAsAction="never"
+        />
+    <item
+        android:id="@+id/problem_images"
+        android:orderInCategory="4"
         android:title="@string/problem_images_item"
         app:showAsAction="never"
         />
