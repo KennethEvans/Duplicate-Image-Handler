@@ -14,7 +14,7 @@
     <string name="check_box_subdirectories">Include Subdirectories</string>
     <string name="image_content_desc">Image</string>
     <string name="problem_images_item">Show Problem Images</string>
-    <string name="remove_checked_item">Remove Checked Images</string>
+    <string name="remove_checked_item">Delete Checked Images</string>
     <string name="invalid_images_title">Problem Images (No Thumbnail)</string>
     <string name="group_title">Group %d</string>
 

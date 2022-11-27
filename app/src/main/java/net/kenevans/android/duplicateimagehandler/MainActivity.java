@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity implements IConstants {
     private ActivityMainBinding mBinding;
     private boolean mUseSubdirectories;
     private boolean mReadMediaImagesAsked;
-    private final String mReadImagePermission = (Build.VERSION.SDK_INT >= 33) ?
+    private String mReadImagePermission = (Build.VERSION.SDK_INT >= 33) ?
             Manifest.permission.READ_MEDIA_IMAGES :
             Manifest.permission.READ_EXTERNAL_STORAGE;
 

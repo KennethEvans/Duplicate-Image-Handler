@@ -1,16 +1,12 @@
 package net.kenevans.android.duplicateimagehandler;
 
-import android.app.Activity;
 import android.app.PendingIntent;
-import android.app.RecoverableSecurityException;
-import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -29,7 +25,6 @@ import android.widget.TextView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,7 +38,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.documentfile.provider.DocumentFile;
 
 
 public class GroupActivity extends AppCompatActivity implements IConstants {
@@ -64,14 +58,13 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
                         @Override
                         public void onActivityResult(ActivityResult result) {
                             Log.d(TAG, "deleteResultLauncher: "
-                            + ActivityResult.resultCodeToString(result.getResultCode()));
-                            mHandleDelete = false;
+                                    + ActivityResult.resultCodeToString(result.getResultCode()));
+                            mHandleDelete = true;
                             if (result.getResultCode() == RESULT_OK) {
-                                Log.d(TAG, "deleteResultLauncher succeeded");
-                                mHandleDelete = true;
+                                // Do nothing for now
                             } else if (result.getResultCode() == RESULT_CANCELED) {
-                                Log.d(TAG, "deleteResultLauncher cancelled");
-                                mHandleDelete = false;
+                                Utils.errMsg(GroupActivity.this,
+                                        "Deleting images was cancelled");
                             }
                         }
                     }
@@ -107,6 +100,7 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
                 + "mHandleDelete=" + mHandleDelete);
         super.onResume();
         if (mHandleDelete) {
+            mHandleDelete = false;
             mImages = ImageRepository.getImages(this, mDirectory,
                     mUseSubdirectories);
             startFind();
@@ -144,21 +138,6 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         }
         return super.onOptionsItemSelected(item);
     }
-
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent
-//            data) {
-//        mHandleDelete = false;
-//        if (requestCode == REQ_DELETE_IMAGES) {
-//            if (resultCode == Activity.RESULT_OK) {
-//                Log.d(TAG, "REQ_DELETE_IMAGES succeeded");
-//                mHandleDelete = true;
-//            } else if (resultCode == Activity.RESULT_CANCELED) {
-//                Log.d(TAG, "REQ_DELETE_IMAGES cancelled");
-//            }
-//            super.onActivityResult(requestCode, resultCode, data);
-//        }
-//    }
 
     private void startFind() {
         Log.d(TAG, this.getClass().getSimpleName() + ".startFind:");
@@ -242,10 +221,8 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
     }
 
     /**
-     * Removes the checked images. Runs in a thread as it can take some
-     * time.
-     * Calls startFind when done, which also runs in a thread. Each of these
-     * threads will have a new progress bar.
+     * Removes the checked images. Uses MediaStore.createDeleteRequest
+     * available in API 30. Works for All Media.
      */
     private void removeCheckedImages() {
         Log.d(TAG, this.getClass().getSimpleName() +
@@ -265,111 +242,22 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         for (Image image : checkedImages) {
             uriList.add(ContentUris.withAppendedId(uri, image.getId()));
         }
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            Log.d(TAG, "removeCheckedImages: Launching PendingIntent"
-                    + " nImages=" + uriList.size());
-            PendingIntent pi =
-                    MediaStore.createDeleteRequest(this.getContentResolver(),
-                            uriList);
-            try {
-                IntentSenderRequest senderRequest =
-                        new IntentSenderRequest.Builder(pi)
-                                .setFillInIntent(null)
-                                .setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION, 0)
-                                .build();
-                deleteResultLauncher.launch(senderRequest);
-            } catch (Exception ex) {
-                Log.d(TAG, "removeCheckedImages: Error launching " +
-                        "PendingIntent");
-            }
-        } else {
-            Log.d(TAG, "removeCheckedImages: Build < 30");
-            ContentResolver resolver = this.getContentResolver();
-            for (Uri uri1 : uriList) {
-                try {
-                    resolver.delete(uri1, null, null);
-                } catch (SecurityException securityException) {
-                    RecoverableSecurityException recoverableSecurityException =
-                            (RecoverableSecurityException) securityException;
-                    IntentSenderRequest senderRequest =
-                            new IntentSenderRequest.Builder(
-                                    recoverableSecurityException.getUserAction()
-                                            .getActionIntent().getIntentSender()).build();
-                    deleteResultLauncher.launch(senderRequest);
-                }
-            }
+        Log.d(TAG, "removeCheckedImages: Launching PendingIntent"
+                + " nImages=" + uriList.size());
+        PendingIntent pi =
+                MediaStore.createDeleteRequest(this.getContentResolver(),
+                        uriList);
+        try {
+            IntentSenderRequest senderRequest =
+                    new IntentSenderRequest.Builder(pi)
+                            .setFillInIntent(null)
+                            .setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION, 0)
+                            .build();
+            deleteResultLauncher.launch(senderRequest);
+        } catch (Exception ex) {
+            Log.d(TAG, "removeCheckedImages: Error launching " +
+                    "PendingIntent");
         }
-    }
-
-    /**
-     * Removes the checked images. Runs in a thread as it can take some
-     * time.
-     * Calls startFind when done, which also runs in a thread. Each of these
-     * threads will have a new progress bar.
-     */
-    private void removeCheckedImages0() {
-        Log.d(TAG, this.getClass().getSimpleName() +
-                ".removeCheckedImages:");
-        List<Image> checkedImages = new ArrayList<>();
-        for (Image image : mImages) {
-            if (image.isChecked()) {
-                checkedImages.add(image);
-            }
-        }
-        if (checkedImages.size() == 0) {
-            Utils.warnMsg(this, "There are no checked images to remove");
-            return;
-        }
-        mListView.setAdapter(new GroupAdapter(GroupActivity.this));
-        if (mProgressBar != null) {
-            mProgressBar.setIndeterminate(false);
-            mProgressBar.setMax(checkedImages.size());
-            mProgressBar.setProgress(0);
-            mProgressBar.setVisibility(View.VISIBLE);
-        }
-        new Thread(() -> {
-            mGroups = new ArrayList<>();
-            runOnUiThread(() ->
-                    mListView.setAdapter(new GroupAdapter(GroupActivity.this)
-                    ));
-            Uri persistedUri =
-                    getContentResolver().getPersistedUriPermissions().get(0).getUri();
-            DocumentFile documentFile = DocumentFile.fromTreeUri(this,
-                    persistedUri);
-            List<Image> errorImages = new ArrayList<>();
-            boolean res;
-            int nImages = 0;
-            for (Image image : checkedImages) {
-                nImages++;
-                File file = new File(image.getPath());
-                DocumentFile nextDocument =
-                        documentFile.findFile(file.getName());
-                try {
-                    res = DocumentsContract.deleteDocument(getContentResolver(),
-                            nextDocument.getUri());
-                    if (!res) {
-                        errorImages.add(image);
-                    } else {
-                        mImages.remove(image);
-                    }
-                } catch (Exception ex) {
-                    Utils.excMsg(this, "Error deleting " + file, ex);
-                }
-                int finalNImages = nImages;
-                GroupActivity.this.runOnUiThread(() ->
-                        mProgressBar.setProgress(finalNImages)
-                );
-            }
-            if (errorImages.size() > 0) {
-                StringBuilder msg = new StringBuilder();
-                msg.append("Errors deleting:").append("\n");
-                for (Image image2 : errorImages) {
-                    msg.append(image2.getPath()).append("\n");
-                }
-                Utils.errMsg(this, msg.toString());
-            }
-            startFind();
-        }).start();
     }
 
     /**
@@ -394,8 +282,6 @@ public class GroupActivity extends AppCompatActivity implements IConstants {
         builder.setView(textView);
         builder.setPositiveButton(android.R.string.ok,
                 (dialog, which) -> dialog.dismiss());
-//        builder.setNegativeButton(android.R.string.cancel,
-//                (dialog, which) -> dialog.cancel());
         builder.show();
     }
 
