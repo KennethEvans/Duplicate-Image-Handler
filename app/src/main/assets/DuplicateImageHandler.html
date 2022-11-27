@@ -7,7 +7,7 @@
 <body>
 <h3 align="center">Duplicate Image Handler</h3>
 <p align="left">Duplicate Image Handler is an app for finding duplicate images on your device and optionally deleting them. There are many such apps. Most look at all the images on the device, but will not let you limit the search to a single directory. When there are many images, this can be overwhelming and hard to navigate. Duplicate Image Handler gives you the option of doing either, the reason it was written. </p>
-<p align="left">The interface is simple, and it  only does images. It may not work for some valid media image files, such as Scalable Vector Graphics (SVG), Photoshop (PSD), or empty files of any image type.</p>
+<p align="left">The interface is simple, and it  only does images. It may not work for some valid media image files, such as Scalable Vector Graphics (SVG), Photoshop (PSD), or empty files of any image type. It requires Android 11 (API 30). </p>
 <p align="left">It works by reducing the image to an 8 x 8 grayscale Bitmap, calculating a 64 character string based on whether a pixel is greater than the average gray value or not, then comparing these strings using the <a href="https://en.wikipedia.org/wiki/Hamming_distance">Hamming distance</a>. The images are obtained from the Android Media Store, and so will depend on what your device considers to be image media and whether a thumbnail can be obtained from the media found (why it may not work for SVG, PSD, and empty files).</p>
 <p align="left"><a href="#acknowledgements">Acknowledgements</a> are found at the end. </p>
 <p>The interface consists of two screens:</p>
